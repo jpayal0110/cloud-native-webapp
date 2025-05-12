@@ -2,6 +2,8 @@
 
 This project is a cloud-native Node.js web application designed for modern deployment using AWS infrastructure, GitHub Actions for CI/CD, and monitoring via CloudWatch. It supports core features like health check APIs, secure file uploads to S3, and structured logging.
 
+## For infra code checkout:  **[Terraform AWS Infrastructure](https://github.com/jpayal0110/terraform-aws-infra)**
+
 
 ## Features
 
