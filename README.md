@@ -2,6 +2,7 @@
 
 This project is a cloud-native Node.js web application designed for modern deployment using AWS infrastructure, GitHub Actions for CI/CD, and monitoring via CloudWatch. It supports core features like health check APIs, secure file uploads to S3, and structured logging.
 
+
 ## Features
 
 - RESTful API with Express.js
@@ -12,30 +13,6 @@ This project is a cloud-native Node.js web application designed for modern deplo
 - Systemd service integration for auto-start on EC2
 - Automated builds with Packer
 - GitHub Actions workflows for CI/CD and validation
-
-## Project Structure
-
-```
-webapp-main/
-├── app.js
-├── controllers/
-│   ├── healthCheckController.js
-│   └── s3Controller.js
-├── config/
-│   └── config.js
-├── services/
-│   └── s3Service.js
-├── middleware/
-│   └── auth.js
-├── models/
-│   └── index.js
-├── routes/
-│   └── index.js
-├── .github/workflows/
-│   ├── webapp.yml
-│   ├── packer-build.yml
-│   └── packer-check.yml
-```
 
 ## Deployment
 
@@ -69,8 +46,4 @@ webapp-main/
   - `packer-check.yml` – template validation
   - `packer-build.yml` – image creation and deployment
 
-To disable workflows, delete or rename the `.github/workflows` directory.
 
-## License
-
-This project is developed for educational and showcase purposes. You are free to reuse the structure and code with attribution.
