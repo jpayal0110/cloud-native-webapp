@@ -1,0 +1,162 @@
+name: Build Packer Custom Image
+
+on:
+  push:
+    branches:
+      - main # Trigger workflow when PR is merged into main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: ${{ vars.NODE_ENV }}
+      DB_HOST: ${{ vars.DB_HOST }}
+      DB_USER: ${{ vars.DB_USER }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      PORT: ${{ vars.PORT }}
+
+    services:
+      mysql:
+        image: mysql:5.7
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.DB_NAME }}
+          MYSQL_USER: ${{ vars.DB_USER }}
+          MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping --silent" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Set Up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Dependencies
+        run: |
+          npm install --omit=dev
+          npm install mysql2  # Ensure mysql2 is installed
+
+      - name: Run Integration Tests
+        run: npm test
+
+      # Build the application artifact
+      - name: zip webapp
+        run: |
+          zip -r app.zip app.js logger.js package.json package-lock.json node_modules/ controllers/ routes/ models/ migrations/ scripts/ config/ csye6225.service middleware/
+          echo "app.zip created"
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app
+          path: app.zip
+
+  packer-build:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Download Build Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: app
+
+      # Set up AWS credentials
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Set Up Packer
+        uses: hashicorp/setup-packer@main
+
+      - name: Packer Init II
+        run: packer init aws.pkr.hcl
+
+      - name: Packer Validate II
+        run: packer validate aws.pkr.hcl
+
+      - name: Run Packer Build for AWS
+        run: packer build aws.pkr.hcl
+
+      - name: Clean Up Build Artifacts
+        run: rm -f app.zip
+
+      - name: Get Latest AMI ID
+        id: get_ami
+        run: |
+          AMI_ID=$(aws ec2 describe-images \
+            --owners ${{ secrets.AWS_ACCOUNT_ID }} \
+            --filters "Name=name,Values=custom-image-*" \
+            --query 'Images | sort_by(@, &CreationDate) | [-1].ImageId' \
+            --output text)
+          echo "Latest AMI ID: $AMI_ID"
+          echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS CLI for DEMO account
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.DEMO_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.DEMO_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Create Launch Template Version
+        id: create_lt_version
+        run: |
+          LT_VERSION=$(aws ec2 create-launch-template-version \
+          --launch-template-name "${{ secrets.LAUNCH_TEMPLATE_NAME }}" \
+          --source-version 1 \
+          --launch-template-data "{\"ImageId\":\"${{ steps.get_ami.outputs.ami_id }}\"}" \
+          --query 'LaunchTemplateVersion.VersionNumber' \
+          --output text)
+
+          echo "LT_VERSION=$LT_VERSION"
+          echo "lt_version=$LT_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Update Auto Scaling Group to Use Latest Launch Template Version
+        run: |
+          aws autoscaling update-auto-scaling-group \
+            --auto-scaling-group-name "${{ secrets.ASG_NAME }}" \
+            --launch-template "LaunchTemplateName=${{ secrets.LAUNCH_TEMPLATE_NAME }},Version=${{ steps.create_lt_version.outputs.lt_version }}"
+
+      - name: Start Instance Refresh
+        id: instance_refresh
+        run: |
+          REFRESH_ID=$(aws autoscaling start-instance-refresh \
+            --auto-scaling-group-name "${{ secrets.ASG_NAME }}" \
+            --preferences '{"MinHealthyPercentage": 100, "InstanceWarmup": 300}' \
+            --query 'InstanceRefreshId' \
+            --output text)
+          echo "Instance Refresh ID: $REFRESH_ID"
+          echo "refresh_id=$REFRESH_ID" >> $GITHUB_OUTPUT
+
+      - name: Wait for Instance Refresh to Complete
+        run: |
+          STATUS="InProgress"
+          while [ "$STATUS" == "InProgress" ]; do
+            sleep 30
+            STATUS=$(aws autoscaling describe-instance-refreshes \
+              --auto-scaling-group-name "${{ secrets.ASG_NAME }}" \
+              --instance-refresh-ids "${{ steps.instance_refresh.outputs.refresh_id }}" \
+              --query 'InstanceRefreshes[0].Status' \
+              --output text)
+            echo "Current Status: $STATUS"
+          done
+
+          if [ "$STATUS" == "Successful" ]; then
+            echo "Instance refresh completed successfully."
+          else
+            echo "Instance refresh failed with status: $STATUS"
+            exit 1
+          fi

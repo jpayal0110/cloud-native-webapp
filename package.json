@@ -1,0 +1,40 @@
+{
+  "name": "webapp-forked",
+  "version": "1.0.0",
+  "description": "Build and Deploy instructions for the web application",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "test": "jest --forceExit",
+    "build": "mkdir -p dist && cp -r src package.json package-lock.json dist/"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transformIgnorePatterns": [
+      "/node_modules/(?!uuid)"
+    ]
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "^2.1692.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "hot-shots": "^10.2.1",
+    "multer": "^1.4.5-lts.2",
+    "mysql2": "^3.14.0",
+    "sequelize": "^6.37.6",
+    "sequelize-cli": "^6.6.2",
+    "uuid": "^11.1.0",
+    "winston": "^3.17.0",
+    "winston-cloudwatch": "^6.3.0"
+  },
+  "keywords": [],
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
+  },
+  "directories": {
+    "test": "tests"
+  }
+}

@@ -1,0 +1,31 @@
+name: Packer Format & Validate
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+      
+      - name: Initialize Packer I
+        run: packer init aws.pkr.hcl
+
+      - name: Run Packer Format
+        run: |
+          packer fmt -check -diff aws.pkr.hcl
+
+      - name: Create Dummy dist/app.zip
+        run: |
+          zip -r app.zip .
+
+      - name: Run Packer Validate I
+        run: |
+          packer validate aws.pkr.hcl
