@@ -25,25 +25,35 @@ This project is a cloud-native Node.js web application designed for modern deplo
 - MySQL or PostgreSQL RDS instance (if used)
 - Node.js and npm installed
 
-### Setup Instructions
+## To run the app locally Pre-requisites
 
-1. Clone the repository
-2. Install dependencies:
-   ```
-   npm install
-   ```
-3. Set up environment config in `config/config.js`
-4. Run the app:
-   ```
-   node app.js
-   ```
-5. Use `csye6225.service` to run as a systemd service on startup.
+- Install latest Node.js. Verify the versions using below commands:
+```
+node -v
+npm -v
+```
+- Install latest MYSQL
+- Clone the repository using git command: git clone git@github.com:jpayal0110/cloud-native-webapp.git
+- Navigate to webapp directory using git CLI (git bash): cd webapp
+- Install dependencies (dotenv, express, sequelize, pg, pg-hstore, bcryptjs) using git command: npm install
+- Create .env file and set below paramaters:
+```
+HOST=localhost
+PORT=<db_server_port>
+DATABASE=<database_name>
+USER=<your_db_username>
+DIALECT=postgres
+PASSWORD=<your_db_password>
+BCRYPT_SALT_ROUNDS=<no_of_salt_rounds>
+```
+- Run the app using command: npm run dev
 
-## CI/CD
-
-- GitHub Actions:
-  - `webapp.yml` – main CI pipeline
-  - `packer-check.yml` – template validation
-  - `packer-build.yml` – image creation and deployment
-
+### To create and AMI from packer template
+- Install Packer and run below commands
+```
+packer init .
+packer fmt .
+packer validate .
+packer build csye6225-aws.pkr.hcl
+```
 
