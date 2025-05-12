@@ -1,63 +1,76 @@
-# Web Application 
+# Cloud-Native Web Application
 
-## Prerequisites
+This project is a cloud-native Node.js web application designed for modern deployment using AWS infrastructure, GitHub Actions for CI/CD, and monitoring via CloudWatch. It supports core features like health check APIs, secure file uploads to S3, and structured logging.
 
-Demo!
+## Features
 
-Before running this application, ensure you have the following installed:
+- RESTful API with Express.js
+- Health check endpoint (`/healthz`)
+- File upload to Amazon S3 with metadata logging
+- Secure access with Secrets Manager and IAM roles
+- Structured logging with Winston and CloudWatch
+- Systemd service integration for auto-start on EC2
+- Automated builds with Packer
+- GitHub Actions workflows for CI/CD and validation
 
-- [Node.js](https://nodejs.org/) (v14.x or later)
-- [MySQL](https://www.mysql.com/) (v5.7 or later)
+## Project Structure
 
-## Setup Instructions
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/CSYE-6225-Cloud-Comptuting/webapp.git
-cd healthcheck-app
+```
+webapp-main/
+├── app.js
+├── controllers/
+│   ├── healthCheckController.js
+│   └── s3Controller.js
+├── config/
+│   └── config.js
+├── services/
+│   └── s3Service.js
+├── middleware/
+│   └── auth.js
+├── models/
+│   └── index.js
+├── routes/
+│   └── index.js
+├── .github/workflows/
+│   ├── webapp.yml
+│   ├── packer-build.yml
+│   └── packer-check.yml
 ```
 
-### 2. Install Dependencies
+## Deployment
 
-Run the following command to install the required dependencies:
+### Prerequisites
 
-```bash
-npm install
-```
+- AWS CLI configured
+- EC2 instance with appropriate IAM role
+- S3 bucket created
+- Secrets stored in AWS Secrets Manager
+- MySQL or PostgreSQL RDS instance (if used)
+- Node.js and npm installed
 
-This will install:
-- Express
-- Sequelize and mysql2
-- dotenv for environment variable management
+### Setup Instructions
 
-### 3. Configure Environment Variables
+1. Clone the repository
+2. Install dependencies:
+   ```
+   npm install
+   ```
+3. Set up environment config in `config/config.js`
+4. Run the app:
+   ```
+   node app.js
+   ```
+5. Use `csye6225.service` to run as a systemd service on startup.
 
-Create a `.env` file in the root directory and add the following environment variables:
+## CI/CD
 
-```bash
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=password
-DB_NAME=healthcheck_db
-```
+- GitHub Actions:
+  - `webapp.yml` – main CI pipeline
+  - `packer-check.yml` – template validation
+  - `packer-build.yml` – image creation and deployment
 
-Replace the `DB_HOST`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` values with your MySQL configurations.
+To disable workflows, delete or rename the `.github/workflows` directory.
 
-### 4. Initialize the Database & Run the Application
+## License
 
-You need to ensure that the database is created and the models are synced. The application will automatically create the database if it does not exist when you start it.
-
-Run the application to initialize:
-
-```bash
-npm start
-```
-
-### 7. Test the Application
-
-Once the application is running, you can test the health check endpoint by making a GET request to:
-
-```bash
-http://localhost:3000/healthz
-```
+This project is developed for educational and showcase purposes. You are free to reuse the structure and code with attribution.
